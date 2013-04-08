@@ -19,9 +19,12 @@ from datetime import datetime, timedelta
 
 # PYGAME
 import pygame
+import pylase as ol
 
 # MY CODES
+"""
 from daclib import dac
+"""
 from daclib.common import *
 from globalvals import *
 from colors import *
@@ -85,6 +88,7 @@ THREADS
 ps = PointStream()
 DRAW = ps
 
+"""
 def dac_thread():
 	global PLAYERS, DRAW
 
@@ -103,6 +107,20 @@ def dac_thread():
 			traceback.print_tb(sys.exc_info()[2])
 			print "\n"
 			pass
+"""
+
+frame_number = 0
+
+def draw_frame():
+        global DRAW, frame_number
+
+        #print "drawing frame ", frame_number
+        frame_number = frame_number + 1
+        
+        ol.loadIdentity()
+        #ol.scale((MAX_X, MAX_Y))
+        DRAW.draw()
+        ol.renderFrame(50)
 
 def joystick_thread():
 	"""Manage the joysticks with PyGame"""
@@ -128,6 +146,7 @@ def joystick_thread():
 
 	# Controller wrapper (Xbox, PS3, etc.)
 	controller = setup_controls(p1.js)
+        print controller
 
 	# Bullet color increment
 	colors = [COLOR_GREEN, COLOR_RED, COLOR_BLUE, COLOR_YELLOW]
@@ -136,7 +155,9 @@ def joystick_thread():
 
 	while True:
 		e = pygame.event.get()
-
+                if e:
+                        print e
+                
 		for p in PLAYERS:
 			lVert, lHori, rVert, rHori = (0, 0, 0, 0)
 
@@ -145,30 +166,73 @@ def joystick_thread():
 			rVert = controller.getRightVert()
 			rHori = controller.getRightHori()
 
+                        """
 			if abs(rVert) > 0.2:
 				y = ship.y
-				y += -1 * int(rVert * SIMPLE_TRANSLATION_SPD)
-				if MIN_Y < y < MAX_Y:
+				y += -1 * rVert * SIMPLE_TRANSLATION_SPD
+                                if y > MAX_Y:
+                                        y = MIN_Y
+                                if y < MIN_Y:
+                                        y = MAX_Y
+				if MIN_Y <= y <= MAX_Y:
 					ship.y = y
 
 			if abs(rHori) > 0.2:
 				x = ship.x
-				x += -1 * int(rHori * SIMPLE_TRANSLATION_SPD)
-				if MIN_X < x < MAX_X:
+				x += 1 * rHori * SIMPLE_TRANSLATION_SPD
+                                if x > MAX_X:
+                                        x = MIN_X
+                                if x < MIN_X:
+                                        x = MAX_X
+				if MIN_X <= x <= MAX_X:
 					ship.x = x
+                        """
+
+                        
+                        if controller.getThrustButton() not in [0.0, -1.0]:
+                                accel = 0.0005
+                                accelX = accel * math.cos(ship.theta)
+                                accelY = accel * math.sin(ship.theta)
+                                ship.xVel -= accelX
+                                ship.yVel -= accelY
+                                MAX_V = 0.04
+                                if ship.xVel > MAX_V:
+                                        ship.xVel = MAX_V
+                                if ship.xVel < -MAX_V:
+                                        ship.xVel = -MAX_V
+                                if ship.yVel > MAX_V:
+                                        ship.yVel = MAX_V
+                                if ship.yVel < -MAX_V:
+                                        ship.yVel = -MAX_V
+                                ship.vel = math.sqrt(ship.yVel * ship.yVel + ship.xVel * ship.xVel)
+                                vel_theta = math.atan2(ship.yVel, ship.xVel)
+                        elif abs(ship.vel) > 0.0:
+                                if ship.vel > 0.0:
+                                        ship.vel -= 0.0001
+                                        if ship.vel < 0.0:
+                                                ship.vel = 0.0
+                                if ship.vel < 0.0:
+                                        ship.vel += 0.0001
+                                        if ship.vel > 0.0:
+                                                ship.vel = 0.0
+                                ship.xVel = ship.vel * math.cos(vel_theta)
+                                ship.yVel = ship.vel * math.sin(vel_theta)
+
+                        print "accel_theta, vel, xvel, yvel = ", ship.accel_theta, ship.vel, ship.xVel, ship.yVel
 
 			# Player rotation
-			t = math.atan2(lVert, lHori)
-			ship.theta = t
+			#t = math.atan2(lVert, -lHori)
+			ship.theta -= lHori * 0.1
 
 			# Health Bar Location
 			STATE.healthbar.x = ship.x
-			STATE.healthbar.y = ship.y - 2500
+			STATE.healthbar.y = ship.y + 0.1
 
 			# Both triggers shoot
 			tOff = [0.0, -1.0]
 			trigger = True
-
+                        #print controller.getLeftTrigger()
+                        
 			if controller.getLeftTrigger() in tOff and \
 					controller.getRightTrigger() in tOff:
 				trigger = False
@@ -209,63 +273,63 @@ def game_thread():
 			# TOP RIGHT
 			x = MIN_X
 			y = MAX_Y
-			xVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
-			yVel = -random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 
 		elif spawnType == 1:
 			# BOTTOM RIGHT
 			x = MIN_X
 			y = MIN_Y
-			xVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
-			yVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 
 		elif spawnType == 2:
 			# BOTTOM LEFT
 			x = MAX_X
 			y = MIN_Y
-			xVel = -random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
-			yVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 
 		elif spawnType == 3:
 			# TOP LEFT
 			x = MAX_X
 			y = MAX_Y
-			xVel = -random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
-			yVel = -random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 
 		elif spawnType == 4:
 			# TOP EDGE
-			x = random.randint(MIN_X, MAX_X)
+			x = random.uniform(MIN_X, MAX_X)
 			y = MAX_Y
-			xVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 			xVel *= 1 if random.randint(0, 1) else -1
-			yVel = -random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 
 		elif spawnType == 5:
 			# RIGHT EDGE
 			x = MIN_X
-			y = random.randint(MIN_Y, MAX_Y)
-			xVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
-			yVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			y = random.uniform(MIN_Y, MAX_Y)
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 			yVel *= 1 if random.randint(0, 1) else -1
 
 		elif spawnType == 6:
 			# BOTTOM EDGE
-			x = random.randint(MIN_X, MAX_X)
+			x = random.uniform(MIN_X, MAX_X)
 			y = MIN_Y
-			xVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 			xVel *= 1 if random.randint(0, 1) else -1
-			yVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 
 		elif spawnType == 7:
 			# LEFT EDGE
 			x = MAX_X
-			y = random.randint(MIN_Y, MAX_Y)
-			xVel = -random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
-			yVel = random.randint(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			y = random.uniform(MIN_Y, MAX_Y)
+			xVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 			yVel *= 1 if random.randint(0, 1) else -1
 
-		radius = random.randint(ASTEROID_MIN_RADIUS, ASTEROID_MAX_RADIUS)
+		radius = random.uniform(ASTEROID_MIN_RADIUS, ASTEROID_MAX_RADIUS)
 
 		e = Asteroid(x, y, r=CMAX, g=CMAX, b=0, radius=radius)
 		e.xVel = xVel
@@ -284,21 +348,22 @@ def game_thread():
 							PARTICLE_SPAWN_MAX)
 		for i in range(np):
 			p = Particle(x, y, CMAX, CMAX, CMAX)
-			p.xVel = random.randint(PARTICLE_MIN_X_VEL,
+			p.xVel = random.uniform(PARTICLE_MIN_X_VEL,
 									PARTICLE_MAX_X_VEL)
-			p.yVel = random.randint(PARTICLE_MIN_Y_VEL,
+			p.yVel = random.uniform(PARTICLE_MIN_Y_VEL,
 									PARTICLE_MAX_Y_VEL)
 			DRAW.objects.append(p)
 
 	# Player Object
+	font = ol.getDefaultFont()
 	ship = Ship(0, 0, rgb=COLOR_PINK, radius=SHIP_SIZE)
 	healthbar = HealthBar(0, 0, r=0, g=CMAX, b=0, radius=BALL_RADIUS/2)
 
 	# Initial placement
 	ship.x = (MIN_X + MAX_X) /2
-	ship.y = (MAX_Y - MIN_Y) /2
+	ship.y = (MAX_Y + MIN_Y) /2
 	healthbar.x = ship.x
-	healthbar.y = ship.y - 2500
+	healthbar.y = ship.y - 0.1
 
 	DRAW.objects.append(ship)
 	DRAW.objects.append(healthbar)
@@ -323,8 +388,8 @@ def game_thread():
 				bulletSpawnOk = False
 
 			if STATE.gameOver and random.randint(0, 20) == 0:
-				x = random.randint(MIN_X, MAX_X)
-				y = random.randint(MIN_Y, MAX_Y)
+				x = random.uniform(MIN_X, MAX_X)
+				y = random.uniform(MIN_Y, MAX_Y)
 				spawn_particles(x, y)
 
 			"""
@@ -378,11 +443,17 @@ def game_thread():
 
 							# GAME OVER!
 							if STATE.healthbar.health <= 0:
-								ship.destroy = True
+								ship.skipDraw = True
 								healthbar.destroy = True
 								spawn_particles(ship.x, ship.y)
 								STATE.gameOver = True
 								print "Game Over!"
+
+                        if STATE.gameOver:
+                                text = "GAME OVER!"
+                                w = ol.getStringWidth(font, 0.3, text)
+                                ol.drawString(font, (-w/2,0.15), 0.3, ol.C_WHITE, text)
+
 
 			numEnemies = 0
 			numBullets = 0
@@ -403,7 +474,21 @@ def game_thread():
 
 				# PLAYER
 				if type(obj) == Ship:
-					continue
+					x = obj.x
+                                        y = obj.y
+ 					x += obj.xVel
+					y += obj.yVel
+					if x < MIN_X:
+                                                x = MAX_X
+                                        if x > MAX_X:
+                                                x = MIN_X
+                                        if y < MIN_Y:
+                                                y = MAX_Y
+                                        if y > MAX_Y:
+                                                y = MIN_Y
+					obj.x = x
+					obj.y = y
+                                        #print "ship x,y = ", obj.x, obj.y
 
 				# BULLETS
 				elif type(obj) == Bullet:
@@ -413,9 +498,14 @@ def game_thread():
 					y = obj.y
 					x += BULLET_SPEED * math.cos(obj.theta)
 					y += BULLET_SPEED * math.sin(obj.theta)
-					if x < MIN_X or x > MAX_X or y < MIN_Y or y > MAX_Y :
-						obj.destroy = True
-						continue
+					if x < MIN_X:
+                                                x = MAX_X
+                                        if x > MAX_X:
+                                                x = MIN_X
+                                        if y < MIN_Y:
+                                                y = MAX_Y
+                                        if y > MAX_Y:
+                                                y = MIN_Y
 					obj.x = x
 					obj.y = y
 
@@ -426,9 +516,14 @@ def game_thread():
 					y = obj.y
 					x += obj.xVel
 					y += obj.yVel
-					if x < MIN_X or x > MAX_X or y < MIN_Y or y > MAX_Y :
-						obj.destroy = True
-						continue
+					if x < MIN_X:
+                                                x = MAX_X
+                                        if x > MAX_X:
+                                                x = MIN_X
+                                        if y < MIN_Y:
+                                                y = MAX_Y
+                                        if y > MAX_Y:
+                                                y = MIN_Y
 					obj.x = x
 					obj.y = y
 					obj.theta += obj.thetaRate
@@ -450,6 +545,7 @@ def game_thread():
 						obj.destroy = True
 						continue
 
+                        draw_frame()
 			time.sleep(0.02)
 
 		except Exception as e:
@@ -460,7 +556,10 @@ def game_thread():
 			print "---------------------\n"
 			time.sleep(0.02)
 
+ol.init()
+"""
 thread.start_new_thread(dac_thread, ())
+"""
 thread.start_new_thread(game_thread, ())
 
 """

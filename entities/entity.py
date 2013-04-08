@@ -44,7 +44,7 @@ class Entity(object):
 
 		# Collision and deallocation
 		self.collides = True
-		self.collisionRadius = 1000
+		self.collisionRadius = 0.1
 		self.destroy = False
 		#self.offscreen = False
 
@@ -60,6 +60,9 @@ class Entity(object):
 	def produce(self):
 		self.lastPt = (0, 0, 0, 0, 0)
 		return self.lastPt
+
+        def draw(self):
+                return None
 
 	def cacheFirstPt(self):
 		"""
@@ -78,5 +81,6 @@ class Entity(object):
 		"""
 		rad = other.collisionRadius + self.collisionRadius
 		hyp = math.sqrt((other.x - self.x)**2 + (other.y - self.y)**2)
+                #print type(self), type(other), rad, hyp
 		return (hyp < rad)
 

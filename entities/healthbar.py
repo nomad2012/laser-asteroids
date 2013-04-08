@@ -11,6 +11,7 @@ import sys
 import thread
 import time
 import pygame
+import pylase as ol
 
 # GLOBALS 
 from globalvals import *
@@ -130,8 +131,46 @@ class HealthBar(Entity):
 				yield p
 
 
+	def draw(self):
+		"""
+		Draw the healthbar shape.
+		"""
+		# Generate points
+                #print ("drawing healthbar")
+                
+		full = self.radius/2
 
+		hPerc = self.health/float(HealthBar.HEALTH_MAX)
+		ihPerc = 1.0 - hPerc
+		green = full * hPerc
+		red = full * (1.0 - hPerc)
 
+		y = 0.01
+		xShift = 0.01
+
+		pts = []
+		pts.append({'x': full + xShift, 'y': y})
+		pts.append({'x': -full*2 + full*3*ihPerc + xShift, 'y': y})
+
+		# RED
+                """
+		pts.append({'x': full - full*3 + xShift, 'y': y})
+		pts.append({'x': -full*2 + xShift, 'y': y})
+                """
+		#pts.append({'x': -full*2, 'y': full})
+		#pts.append({'x': -full*2, 'y': full})
+
+		# Translate points
+		for pt in pts:
+			pt['x'] += self.x
+			pt['y'] += self.y
+
+		# DRAW THE SHAPE
+
+                ol.begin(ol.LINESTRIP)
+                for i in range(len(pts)):
+                        ol.vertex((pts[i]['x'], pts[i]['y']), ol.C_WHITE)
+                ol.end()
 
 		self.drawn = True
 

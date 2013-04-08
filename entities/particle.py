@@ -11,6 +11,7 @@ import sys
 import thread
 import time
 import pygame
+import pylase as ol
 
 # GLOBALS 
 from globalvals import *
@@ -34,4 +35,8 @@ class Particle(Entity):
 	def produce(self):
 		for i in range(20):
 			yield (self.x, self.y, self.r, self.g, self.b)
+
+	def draw(self):
+                #print ("drawing particle")
+		ol.dot((self.x, self.y), 20, ol.C_WHITE)
 

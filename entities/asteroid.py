@@ -11,10 +11,34 @@ import sys
 import thread
 import time
 import pygame
+import pylase as ol
+
 
 # GLOBALS 
 from globalvals import *
 
+
+def frange(start, end=None, inc=None):
+    "A range function, that does accept float increments..."
+
+    if end == None:
+        end = start + 0.0
+        start = 0.0
+
+    if inc == None:
+        inc = 1.0
+
+    L = []
+    while 1:
+        next = start + len(L) * inc
+        if inc > 0 and next >= end:
+            break
+        elif inc < 0 and next <= end:
+            break
+        L.append(next)
+        
+    return L
+    
 # Base class
 from entity import Entity
 
@@ -36,6 +60,26 @@ class Asteroid(Entity):
 		self.collisionRadius = radius
 
 		self.health = Asteroid.HEALTH_MAX
+
+                # Create asteroid geometry
+                minRadius = radius * 0.75
+                maxRadius = radius
+                granularity = 20.0
+                minVary = 25
+                maxVary = 75
+                self.points = []
+                
+                for ang in frange(0.0, 2.0 * math.pi, 2.0 * math.pi / granularity):
+                        angleVaryPc = random.uniform(minVary, maxVary)
+                        angleVaryRadians = (2.0 * math.pi / granularity) * angleVaryPc / 100.0
+                        angleFinal = ang + angleVaryRadians - (math.pi / granularity)
+                        rad = random.uniform(minRadius, maxRadius)
+                        px = math.sin(angleFinal) * rad
+                        py = -math.cos(angleFinal) * rad
+                        #print [px,py]
+                        self.points.append([px,py])
+                self.points.append(self.points[0])
+
 
 	def subtract(self, health):
 		self.health = max(self.health - health, 0)
@@ -108,6 +152,47 @@ class Asteroid(Entity):
 		for i in range(int(round(SQUARE_VERTEX_SAMPLE_PTS/2.0))):
 			self.lastPt = p # KEEP BOTH
 			yield p
+
+		self.drawn = True
+
+	def draw(self):
+		"""
+		Draw the asteroid shape
+		"""
+		# Generate points
+                #print "drawing asteroid"
+		ed = self.radius
+                #print "asteroid radius = ", ed
+
+                pts = []
+		for pt in self.points:
+                        pts.append(pt[:])
+                #print pts
+		#pts.append([ ed, ed])
+		#pts.append([-ed, ed])
+		#pts.append([-ed, -ed])
+		#pts.append([ ed, -ed])
+                #pts.append([ ed, ed])
+
+		# Rotate points
+		for p in pts:
+			x = p[0]
+			y = p[1]
+			p[0] = x*math.cos(self.theta) - y*math.sin(self.theta)
+			p[1] = y*math.cos(self.theta) + x*math.sin(self.theta)
+
+		# Translate points
+                #print "asteroid x,y = ", self.x, self.y
+		for pt in pts:
+                        #print pt
+                	pt[0] += self.x
+			pt[1] += self.y
+                        #print pt
+
+                ol.begin(ol.LINESTRIP)
+                for p in pts:
+                        ol.vertex(tuple(p), ol.C_WHITE)
+                ol.end()
 
 		self.drawn = True
 

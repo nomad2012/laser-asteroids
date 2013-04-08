@@ -11,6 +11,7 @@ import sys
 import thread
 import time
 import pygame
+import pylase as ol
 
 # GLOBALS 
 from globalvals import *
@@ -79,6 +80,38 @@ class Bullet(Entity):
 		for p in make_line(pts[0], pts[1], BULLET_EDGE_SAMPLE_PTS):
 			self.lastPt = p # XXX super important
 			yield p
+
+		self.drawn = True
+
+	def draw(self):
+		"""
+		Draw the bullet shape
+		"""
+                #print ("drawing bullet")
+
+		pts = []
+		pts.append({'x': 0, 'y': 0})
+		pts.append({'x': self.length*math.cos(self.shotAngle),
+					'y': self.length*math.sin(self.shotAngle)})
+
+		"""
+		# Rotate points
+		for p in pts:
+			x = p['x']
+			y = p['y']
+			p['x'] = x*math.cos(self.theta) - y*math.sin(self.theta)
+			p['y'] = y*math.cos(self.theta) + x*math.sin(self.theta)
+		"""
+
+		# Translate points
+		for pt in pts:
+			pt['x'] += self.x
+			pt['y'] += self.y
+
+                ol.begin(ol.LINESTRIP)
+                for i in range(len(pts)):
+                        ol.vertex((pts[i]['x'], pts[i]['y']), ol.C_WHITE)
+                ol.end()
 
 		self.drawn = True
 

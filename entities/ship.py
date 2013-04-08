@@ -11,6 +11,7 @@ import sys
 import thread
 import time
 import pygame
+import pylase as ol
 
 # GLOBALS 
 from globalvals import *
@@ -35,6 +36,8 @@ class Ship(Entity):
 		self.pauseLast = True
 
 		self.theta = 0
+                self.vel = 0
+                self.accel_theta = 0
 
 	def produce(self):
 		"""
@@ -53,6 +56,7 @@ class Ship(Entity):
 
 		pts.append({'x': -ed, 'y': -ed})
 		pts.append({'x': ed, 'y': -ed})
+                pts.append({'x': ed, 'y': ed})
 
 		# Rotate points
 		for p in pts:
@@ -112,6 +116,45 @@ class Ship(Entity):
 		for i in range(int(round(SHIP_VERTEX_SAMPLE_PTS/2.0))):
 			self.lastPt = p # KEEP BOTH
 			yield p
+
+		self.drawn = True
+
+	def draw(self):
+		"""
+		Draw the ship shape.
+		"""
+		# Generate points
+                #print "drawing ship"
+		ed = self.radius/2
+                #print "ed = ", ed
+		pts = []
+		pts.append([ed, ed])
+		#pts.append([-ed, ed])
+
+		pts.append([-ed-ed*2, 0])
+
+		#pts.append([-ed, -ed])
+		pts.append([ed, -ed])
+                pts.append([ed/2, 0])
+                pts.append([ed, ed])
+
+		# Rotate points
+		for p in pts:
+			x = p[0]
+			y = p[1]
+			p[0] = x*math.cos(self.theta) - y*math.sin(self.theta)
+			p[1] = y*math.cos(self.theta) + x*math.sin(self.theta)
+
+		# Translate points
+		for pt in pts:
+			pt[0] += self.x
+			pt[1] += self.y
+
+                ol.begin(ol.LINESTRIP)
+                for p in pts:
+                        #print p
+                        ol.vertex(tuple(p), ol.C_WHITE)
+                ol.end()
 
 		self.drawn = True
 

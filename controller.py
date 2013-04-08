@@ -11,7 +11,7 @@ def setup_controls(joystick):
 	"""
 	Joystick wrapper.
 	"""
-	if re.search('playstation', joystick.get_name(), re.I):
+	if re.search('PS3', joystick.get_name(), re.I):
 		return Ps3Controller(joystick)
 
 	elif re.search('playstation', joystick.get_name(), re.I):
@@ -87,9 +87,12 @@ class Ps3Controller(Controller):
 
 	def getLeftTrigger(self):
 		# TODO: Verify
-		return self.js.get_axis(12)
+		return self.js.get_button(6)
 
 	def getRightTrigger(self):
 		# TODO: Verify
-		return self.js.get_axis(13)
+		return self.js.get_button(7)
+
+        def getThrustButton(self):
+                return self.js.get_button(1)
 
