@@ -151,9 +151,10 @@ class Ship(Entity):
 			pt[1] += self.y
 
                 ol.begin(ol.LINESTRIP)
-                for p in pts:
-                        #print p
-                        ol.vertex(tuple(p), ol.C_WHITE)
+                for i in range(5):
+                        for p in pts:
+                                #print p
+                                ol.vertex(tuple(p), ol.C_WHITE)
                 ol.end()
 
 		self.drawn = True

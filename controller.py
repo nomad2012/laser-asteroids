@@ -86,13 +86,16 @@ class Ps3Controller(Controller):
 		return self.js.get_axis(3)
 
 	def getLeftTrigger(self):
-		# TODO: Verify
 		return self.js.get_button(6)
 
 	def getRightTrigger(self):
-		# TODO: Verify
 		return self.js.get_button(7)
 
         def getThrustButton(self):
                 return self.js.get_button(1)
+
+        def getStartButton(self):
+                return self.js.get_button(9)
+
+        
 

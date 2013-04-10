@@ -62,7 +62,7 @@ class Asteroid(Entity):
 		self.health = Asteroid.HEALTH_MAX
 
                 # Create asteroid geometry
-                minRadius = radius * 0.75
+                minRadius = radius * 0.66
                 maxRadius = radius
                 granularity = 20.0
                 minVary = 25

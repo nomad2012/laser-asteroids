@@ -42,6 +42,7 @@ Main Program
 
 DRAW = None # Will be the global PointStream
 bulletSpawnOk = True
+player = None
 
 class GameState(object):
 	"""
@@ -54,6 +55,7 @@ class GameState(object):
 		self.bullets = []
 		self.asteroids = []
 		self.gameOver = False
+                self.startNewGame = False
 
 STATE = GameState()
 
@@ -125,6 +127,7 @@ def draw_frame():
 def joystick_thread():
 	"""Manage the joysticks with PyGame"""
 	global PLAYERS
+        global player
 	global bulletSpawnOk
 
 	pygame.joystick.init()
@@ -140,6 +143,7 @@ def joystick_thread():
 			rgb = COLOR_PINK)
 
 	PLAYERS.append(p1)
+        player = p1
 
 	numButtons = p1.js.get_numbuttons() # XXX NO!
 	bulletLastFired = datetime.now()
@@ -150,10 +154,10 @@ def joystick_thread():
 
 	# Bullet color increment
 	colors = [COLOR_GREEN, COLOR_RED, COLOR_BLUE, COLOR_YELLOW]
-	ship = STATE.ship
 	ci = 0
 
 	while True:
+                ship = STATE.ship
 		e = pygame.event.get()
                 if e:
                         print e
@@ -225,8 +229,8 @@ def joystick_thread():
 			ship.theta -= lHori * 0.1
 
 			# Health Bar Location
-			STATE.healthbar.x = ship.x
-			STATE.healthbar.y = ship.y + 0.1
+			#STATE.healthbar.x = ship.x
+			#STATE.healthbar.y = ship.y + 0.1
 
 			# Both triggers shoot
 			tOff = [0.0, -1.0]
@@ -248,6 +252,9 @@ def joystick_thread():
 					DRAW.objects.append(b)
 					STATE.bullets.append(b)
 					bulletLastFired = datetime.now()
+                                        
+                        if STATE.gameOver and controller.getStartButton() not in [0.0, -1.0]:
+                                STATE.startNewGame = True
 
 		time.sleep(0.02) # Keep this thread from hogging CPU
 
@@ -258,6 +265,8 @@ numBullets = 0 # XXX: MOve to game state object...
 def game_thread():
 	global DRAW
 	global STATE
+        global PLAYERS
+        global player
 	global numEnemies
 	global numBullets
 	global bulletSpawnOk
@@ -329,7 +338,8 @@ def game_thread():
 			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
 			yVel *= 1 if random.randint(0, 1) else -1
 
-		radius = random.uniform(ASTEROID_MIN_RADIUS, ASTEROID_MAX_RADIUS)
+		#radius = random.uniform(ASTEROID_MIN_RADIUS, ASTEROID_MAX_RADIUS)
+                radius = ASTEROID_MAX_RADIUS
 
 		e = Asteroid(x, y, r=CMAX, g=CMAX, b=0, radius=radius)
 		e.xVel = xVel
@@ -342,7 +352,72 @@ def game_thread():
 
 		DRAW.objects.append(e)
 		STATE.asteroids.append(e)
+                
+	def spawn_child(asteroid):
+		x, y, xVel, yVel = (0, 0, 0, 0)
+		spawnType = random.randint(0, 7)
 
+		"""
+		SPAWN LOCATION -- corners and edges
+		"""
+		if spawnType == 0:
+			# TOP RIGHT
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+
+		elif spawnType == 1:
+			# BOTTOM RIGHT
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+
+		elif spawnType == 2:
+			# BOTTOM LEFT
+			xVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+
+		elif spawnType == 3:
+			# TOP LEFT
+			xVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+
+		elif spawnType == 4:
+			# TOP EDGE
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel *= 1 if random.randint(0, 1) else -1
+			yVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+
+		elif spawnType == 5:
+			# RIGHT EDGE
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel *= 1 if random.randint(0, 1) else -1
+
+		elif spawnType == 6:
+			# BOTTOM EDGE
+			xVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			xVel *= 1 if random.randint(0, 1) else -1
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+
+		elif spawnType == 7:
+			# LEFT EDGE
+			xVel = -random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel = random.uniform(ASTEROID_VEL_MAG_MIN, ASTEROID_VEL_MAG_MAX)
+			yVel *= 1 if random.randint(0, 1) else -1
+
+		radius = asteroid.radius / 2
+
+		e = Asteroid(asteroid.x, asteroid.y, r=CMAX, g=CMAX, b=0, radius=radius)
+		e.xVel = xVel * (ASTEROID_MAX_RADIUS / radius)
+		e.yVel = yVel * (ASTEROID_MAX_RADIUS / radius)
+		#e.thetaRate = random.uniform(-math.pi/100, math.pi/100)
+
+		e.thetaRate = random.uniform(ASTEROID_SPIN_VEL_MAG_MIN,
+									ASTEROID_SPIN_VEL_MAG_MAX)
+		e.thetaRate *= 1 if random.randint(0, 1) else -1
+
+		DRAW.objects.append(e)
+		STATE.asteroids.append(e)
+                
 	def spawn_particles(x, y):
 		np = random.randint(PARTICLE_SPAWN_MIN,
 							PARTICLE_SPAWN_MAX)
@@ -354,24 +429,33 @@ def game_thread():
 									PARTICLE_MAX_Y_VEL)
 			DRAW.objects.append(p)
 
+        def start_new_game():
+                ship = Ship(0, 0, rgb=COLOR_PINK, radius=SHIP_SIZE)
+                healthbar = HealthBar(0, 0, r=0, g=CMAX, b=0, radius=BALL_RADIUS)
+
+                # Initial placement
+                ship.x = (MIN_X + MAX_X) /2
+                ship.y = (MAX_Y + MIN_Y) /2
+                healthbar.x = 0.75
+                healthbar.y = 0.9
+
+                DRAW.objects.append(ship)
+                DRAW.objects.append(healthbar)
+
+                STATE.ship = ship
+                STATE.healthbar = healthbar
+                if player:
+                        player.score = 0
+                for obj in DRAW.objects:
+                        if type(obj) == Asteroid:
+                                obj.destroy = True
+                STATE.gameOver = False
+                STATE.startNewGame = False
+
 	# Player Object
 	font = ol.getDefaultFont()
-	ship = Ship(0, 0, rgb=COLOR_PINK, radius=SHIP_SIZE)
-	healthbar = HealthBar(0, 0, r=0, g=CMAX, b=0, radius=BALL_RADIUS/2)
-
-	# Initial placement
-	ship.x = (MIN_X + MAX_X) /2
-	ship.y = (MAX_Y + MIN_Y) /2
-	healthbar.x = ship.x
-	healthbar.y = ship.y - 0.1
-
-	DRAW.objects.append(ship)
-	DRAW.objects.append(healthbar)
-
-	STATE.ship = ship
-	STATE.healthbar = healthbar
-
-	thread.start_new_thread(joystick_thread, ())
+        start_new_game()
+ 	thread.start_new_thread(joystick_thread, ())
 
 	while True:
 		try:
@@ -421,9 +505,17 @@ def game_thread():
 					if e.checkCollide(b) and not e.destroy:
 						b.destroy = True
 						e.subtract(ASTEROID_HEALTH_BULLET_HIT)
-						if e.health <= 0:
+ 						if e.health <= 0:
 							e.destroy = True
+                                                        if not STATE.gameOver:
+                                                                player.score += 100
 							spawn_particles(e.x, e.y)
+                                                        if (e.radius > ASTEROID_MAX_RADIUS / 4):
+                                                            spawn_child(e)
+                                                            spawn_child(e)
+                                                elif not STATE.gameOver:
+                                                        player.score += 10
+
 
 			# Player-enemy collisions
 			# XXX/FIXME -- nesting hell! ahhh! cleanup, cleanup!
@@ -437,13 +529,16 @@ def game_thread():
 					if e.checkCollide(ship):
 						e.destroy = True
 						spawn_particles(e.x, e.y)
+                                                if (e.radius > ASTEROID_MAX_RADIUS / 4):
+                                                        spawn_child(e)
+                                                        spawn_child(e)
 
 						if not SHIP_IS_INVINCIBLE:
 							STATE.healthbar.subtract(SHIP_HEALTH_ASTEROID_HIT)
 
 							# GAME OVER!
 							if STATE.healthbar.health <= 0:
-								ship.skipDraw = True
+								ship.destroy = True
 								healthbar.destroy = True
 								spawn_particles(ship.x, ship.y)
 								STATE.gameOver = True
@@ -453,6 +548,8 @@ def game_thread():
                                 text = "GAME OVER!"
                                 w = ol.getStringWidth(font, 0.3, text)
                                 ol.drawString(font, (-w/2,0.15), 0.3, ol.C_WHITE, text)
+                                if STATE.startNewGame:
+                                        start_new_game()
 
 
 			numEnemies = 0
@@ -500,12 +597,18 @@ def game_thread():
 					y += BULLET_SPEED * math.sin(obj.theta)
 					if x < MIN_X:
                                                 x = MAX_X
+                                                obj.life -= 1
                                         if x > MAX_X:
                                                 x = MIN_X
+                                                obj.life -= 1
                                         if y < MIN_Y:
                                                 y = MAX_Y
+                                                obj.life -= 1
                                         if y > MAX_Y:
                                                 y = MIN_Y
+                                                obj.life -= 1
+                                        if obj.life <= 0:
+                                                obj.destroy = True
 					obj.x = x
 					obj.y = y
 
@@ -545,6 +648,10 @@ def game_thread():
 						obj.destroy = True
 						continue
 
+                        if player:
+                                score_string = str(player.score)
+                                w = ol.getStringWidth(font, 0.2, score_string)
+                                ol.drawString(font, (-w/2,0.9), 0.2, ol.C_WHITE, score_string)
                         draw_frame()
 			time.sleep(0.02)
 

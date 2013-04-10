@@ -33,6 +33,7 @@ class Bullet(Entity):
 		self.length = length
 		self.shotAngle = shotAngle
 		self.theta = shotAngle
+                self.life = 2
 
 		# Override blanking
 		self.doBlanking = BULLET_DO_BLANKING
